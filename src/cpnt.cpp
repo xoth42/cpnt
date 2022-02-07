@@ -19,6 +19,7 @@ map<string, string> colors = {
 
 int parse(int argc, char **argv)
 {
+	
 	/*
 	Parse Command line arguments
 	./cpnt [args] [color] [message]...
