@@ -35,7 +35,7 @@ int parse(int argc, char **argv)
 	-u		: [color] [message]...
 	underline
 	*/
-
+	return 0;
 }
 
 int main(int argc, char **argv) 
