@@ -17,6 +17,27 @@ map<string, string> colors = {
 	{"purple", 	"35"}
 };
 
+int parse(int argc, char **argv)
+{
+	/*
+	Parse Command line arguments
+	./cpnt [args] [color] [message]...
+	
+	nothing : [color] [message]...
+	
+	TODO:
+	-r		: [rgb value ex=<###,###,###>] [message]...
+	specify rgb color instead of color name
+
+	-b		: [color] [message]...
+	bold
+
+	-u		: [color] [message]...
+	underline
+	*/
+
+}
+
 int main(int argc, char **argv) 
 {
 	string input = argv[1]; //color pre-interp
@@ -33,11 +54,11 @@ int main(int argc, char **argv)
 	}
 
 	string message = argv[2];
-	for (int i = 2; i < argc; i++) {
+	for (int i = 3; i < argc; i++) {
 		//add all message contents
 		message = message + " " + argv[i];
 	}
-	string format = "\033["+colornum+"m"; //does the color
+	string format = "\033[" + colornum + "m"; //does the color
 	
 	//done with format, printing
 	cout << format << message << endl;
