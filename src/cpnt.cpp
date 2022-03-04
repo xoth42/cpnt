@@ -7,10 +7,8 @@
 
 using namespace std;
 
-string format = "";
-
 map<string, string> colors = {
-	//basic colors to interpret input
+	//basic colors to interpret input (placeholder)
 	{"black",	"30"},
 	{"red",		"31"},
 	{"green",	"32"},
@@ -19,63 +17,96 @@ map<string, string> colors = {
 	{"purple", 	"35"}
 };
 
-int parse(int argc, char **argv)
+string parse(int argc, char **argv)
 {
-	char str1 = '-';
-	string args = argv[2];
-	if (str1 != argv[2][0]){
-		cout << 0 << endl;
-		return 0;
-	}
-
-	//there is a '-' in the second arg (arguments given)
-	args = args.substr(1, args.length());
-	//'args' is now only the arguments ex) 'ub'
-	char bold = 'b';
-	if (args.find(bold) != std::string::npos){
-		format = "\033[1m";
-	}
-	char italic = 'i';
-	if (args.find(italic) != std::string::npos){
-		format = format + "\e[3m";
-	}
-
-	
 	/*
 	Parse Command line arguments
-	./cpnt [args] [color] [message]...
+	./cpnt [optional-args] [color] [message]...
 	
-	nothing : [color] [message]...
+	arguments start with - and should be grouped 
+	ex) ./cpnt -biu {etc}
+	order does not matter
+	
+	u	: underline
+	b	: bold
+	i	: italic
+
+	returns:
+	no arguments	: "0"
+	arguments found : [value of attributes] ex) "1;21;3"
+	
 	
 	TODO:
 	-r		: [rgb value ex=<###,###,###>] [message]...
 	specify rgb color instead of color name
 
-	
-
-	-u		: [color] [message]...
-	underline
+	may add more return values, for now it changes the format string in the scope outside of the function
+	escape sequences info: 
+	http://www.techpository.com/linux-terminal-control-commands/
+	https://www.systutorials.com/docs/linux/man/4-console_codes/
+	^
+	"It is generally not good practice to hard-wire terminal controls into programs. 
+	Linux supports a terminfo(5) database of terminal capabilities. Rather than emitting console escape
+	sequences by hand, you will almost always want to use a terminfo-aware screen library or utility
+	such as ncurses(3), tput(1), or reset(1)."
+	tput is a viable option - just need to know how to use it
 	*/
-	return 1;
+	
+	//check if argument contains enough characters, and if comma is the first character given as argument
+	//if not, return "0"
+	if (argc < 2 || '-' != argv[1][0]){
+		return "0";
+	}
+
+	//if so, continue
+
+	string attributes = ""; //to contain excape sequence attributes (colors/formatting) 
+	//example value) 4;1; <-- should turn into "\[4;1;43m" down the line and then eventually
+	//make the output into: underscore (4), bold (1), and color added later: a yellow backround (43) 
+
+	//iterate through char locations from the first to last char in the argument
+	for (int i = 1;i < argc - 1;i++){
+		switch (argv[1][i])
+		{
+		case 'b':
+			//bold
+			attributes+= "1;";
+			break;
+		
+		case 'u':
+			//underline
+			attributes+= "21;";
+			break;
+
+		// case 'i':
+		// 	//italic
+		// 	attributes+= "3;"; //this might not be correct
+		// 	break;	
+		//(it wasnt, but easy fix: find escape sequence for italic which i'll do later)
+		
+		default:
+			break;
+		}
+	}
+
+	return attributes;
 }
 
 int main(int argc, char **argv) 
 {
-	string input = argv[2]; //color pre-interp
-	if (parse(argc, argv) == 1){
-		//bold
-		try{
-		input = argv[3];
-		}
-		catch (out_of_range error){
-			//no more args
-		}
+	string input = argv[1]; //color pre-interp
+	int messageIndex = 2; //to tell message forming loop where to start
+	string attrib = parse(argc, argv);
+	if ((string("0").compare(attrib)) != 0){
+		//arguments detected (output is not 0) this feels inefficient 
+		input = argv[2]; //the color input is past the arguments
+		messageIndex++;
 	}
 	
 	string colornum;
 
 	try {
-	colornum = colors.at(input); 
+	colornum = colors.at(input); //the escape sequence value of the color
 	//color is valid
 	}
 
@@ -84,14 +115,14 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	string message = argv[2];
-	for (int i = 3; i < argc; i++) {
+	//message forming loop
+	string message = argv[messageIndex];
+	for (int i = messageIndex + 1; i < argc; i++) {
 		//add all message contents
 		message = message + " " + argv[i];
 	}
-	format = format + "\033[" + colornum + "m"; //does the color
 	
-	//done with format, printing
-	cout << format << message << endl;
+	//done with format, printing (apply attributes and color)
+	cout << "\033[" + attrib + colornum + "m" << message << endl;
 	
 }
