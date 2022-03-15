@@ -2,13 +2,14 @@
 #include <map>
 #include <string>
 #include <cstdio>
+#include <cstring>
 
-//xoth42 Feb 6 base idea of project
+// xoth42 Feb 6 base idea of project
 
 using namespace std;
 
 map<string, string> colors = {
-	//basic colors to interpret input (placeholder)
+	// basic colors to interpret input (placeholder)
 	{"black",	"30"},
 	{"red",		"31"},
 	{"green",	"32"},
@@ -17,11 +18,42 @@ map<string, string> colors = {
 	{"purple", 	"35"}
 };
 
+string S_lower(string s){
+	/*
+	returns lowercase version of string
+	*/
+	string s2 = s;
+	for (int i = 0;i < s.length();i++){
+		// see if its uppercase
+		if (s[i] > 65 && s[i] < 90){
+			// make lowercase
+			s2[i] = s2[i] + 32;
+		}
+	}
+	return s2;
+}
+
+string check_color(string input){
+	/*
+	returns color escape seq. num if input is valid, "37" if not 37 is the escape sequence for white terminal lettering
+	*/
+	try{
+		return colors.at(S_lower(input)); // the escape sequence value of the color
+		// color is valid
+	}
+
+	catch (exception bad_color){
+		// no color or unrecognized color provided
+		return "37"; 
+	}
+}
+
+
 string parse(int argc, char **argv)
 {
 	/*
 	Parse Command line arguments
-	./cpnt [optional-args] [color] [message]...
+	./cpnt [args] [color] (message)...
 	
 	arguments start with - and should be grouped 
 	ex) ./cpnt -biu {etc}
@@ -52,77 +84,106 @@ string parse(int argc, char **argv)
 	tput is a viable option - just need to know how to use it
 	*/
 	
-	//check if argument contains enough characters, and if comma is the first character given as argument
+	//check if argument contains enough characters or if comma is the first character given as argument
 	//if not, return "0"
-	if (argc < 2 || '-' != argv[1][0]){
+	if (argc < 2 | '-' != argv[1][0]){
+		//cout << argc << argv << endl;
 		return "0";
 	}
 
 	//if so, continue
 
-	string attributes = ""; //to contain excape sequence attributes (colors/formatting) 
+	string attributes = ""; //to contain escape sequence attributes (colors/formatting) 
 	//example value) 4;1; <-- should turn into "\[4;1;43m" down the line and then eventually
 	//make the output into: underscore (4), bold (1), and color added later: a yellow backround (43) 
 
 	//iterate through char locations from the first to last char in the argument
-	for (int i = 1;i < argc - 1;i++){
-		switch (argv[1][i])
-		{
-		case 'b':
-			//bold
-			attributes+= "1;";
-			break;
+	string args = S_lower(argv[1]);
+	for (int i = 1;i <= args.size();i++){
+		try{
 		
-		case 'u':
-			//underline
-			attributes+= "21;";
-			break;
+			if (args[i] == 'b'){
+				//bold
+				attributes =  attributes + "1;";
+			}
+			if (args[i] == 'u'){
+				//underline
+				attributes = attributes + "21;";
+			}	
+		}
 
-		// case 'i':
-		// 	//italic
-		// 	attributes+= "3;"; //this might not be correct
-		// 	break;	
-		//(it wasnt, but easy fix: find escape sequence for italic which i'll do later)
-		
-		default:
-			break;
+		catch (exception parse_err){
+			//cout << i << args.size() << args << endl;
 		}
 	}
-
 	return attributes;
 }
 
+
 int main(int argc, char **argv) 
 {
-	string input = argv[1]; //color pre-interp
-	int messageIndex = 2; //to tell message forming loop where to start
-	string attrib = parse(argc, argv);
-	if ((string("0").compare(attrib)) != 0){
-		//arguments detected (output is not 0) this feels inefficient 
-		input = argv[2]; //the color input is past the arguments
-		messageIndex++;
-	}
-	
-	string colornum;
-
+	string input;
 	try {
-	colornum = colors.at(input); //the escape sequence value of the color
-	//color is valid
-	}
+		try{
+			input = argv[1]; // color pre-interp
+		}
 
-	catch (out_of_range error) {
-		cout << "\033[31mcolor is not valid: " << input << endl;
-		return 1;
-	}
+		catch(out_of_range error){
+			cout << "\033[31mMissing arguments or message" << endl;
+			return 1;
+		}
 
-	//message forming loop
-	string message = argv[messageIndex];
-	for (int i = messageIndex + 1; i < argc; i++) {
-		//add all message contents
-		message = message + " " + argv[i];
+		int messageIndex = 1; 	// to tell message forming loop where to start. Will jump values depending on if:
+
+		string attrib = ""; // attributes for formatting
+
+		try{	
+			attrib = parse(argc, argv);
+		}
+
+		catch (exception atr){
+			cout << "\033[31mParse Failed" << endl;
+		}
+
+		if (attrib != "" && attrib != "0"){
+
+			// arguments detected 
+			input = argv[2];   	// the color input is past the arguments 
+			// argv[0] is the command ex) cpnt
+			// argv[1] is the arguments ex) -ub
+			// 2 is the color ex) blue
+			messageIndex++; 	// set index to after the arguments 
+		}
+		
+		string colornum = check_color(input);
+		if (colornum != "37"){
+			// color is provided and good
+			messageIndex++; // set index over one, could now be 2 or 3 depending on if there are arguments
+		}
+
+		string message = "";
+		// message forming loop
+
+		for (int i = messageIndex; i < argc; i++) {
+			// add all message contents
+			try{
+				if (message != ""){
+					message = message + " " + argv[i];
+				} 
+
+				else{
+					message = argv[i];
+				}
+			}
+			catch (exception error2){
+				// i is too high or other error (not detrimental)
+			}
+		}
+		
+		// done with format, printing (apply attributes and color)
+		cout << "\033[" + attrib + colornum + "m" << message << "\033[0m" << endl;
 	}
-	
-	//done with format, printing (apply attributes and color)
-	cout << "\033[" + attrib + colornum + "m" << message << endl;
-	
+	catch (exception main_err){
+		cout << "\033[31mMain error" << endl;
+	}
 }
